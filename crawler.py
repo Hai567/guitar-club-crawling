@@ -4,10 +4,12 @@ import re
 import csv
 import os
 from playwright.async_api import async_playwright
-from helper import clean_special_characters, write_to_csv, url_to_ffmpeg, download_m3u8_with_ffmpeg, is_url_already_downloaded
+from helper import clean_special_characters, write_to_csv, download_m3u8_with_ffmpeg, is_url_already_downloaded
 
 # CSS selector for all elements with ID starting with "unit"
 UNIT_SELECTOR = "div.join.join-vertical > div"
+TOOLBOX_SELECTOR = "body > button"
+NOTE_SELECTOR = "#notes"
 LESSON_SELECTOR = "ol > li > a"
 BASE_URL = 'https://www.guitarclub.io'
 VIDEO_SELECTOR = "body > main > div > div > div.w-full.max-w-7xl.gap-4.m-auto.py-8.md\:py-16.px-4.md\:px-4.xl\:px-0 > div > div.md\:\[grid-area\:header\].md\:col-span-3 > div.md\:sticky.top-16.z-10 > div:nth-child(1) > div > div > div:nth-child(1) > video"
@@ -51,15 +53,16 @@ async def main():
             lesson_elements = await unit_element.query_selector_all(LESSON_SELECTOR)
             print(unit_id + " - " + unit_name)
             for lesson_ele in lesson_elements:
+                lesson_name = clean_special_characters(await lesson_ele.text_content()).strip()
                 lesson_url = BASE_URL + (await lesson_ele.get_attribute('href'))
+                
                 # Check if this URL has already been downloaded
                 if is_url_already_downloaded(CSV_TRACKING_PATH, lesson_url):
                     print(f"Already downloaded: {lesson_name} - skipping...")
                     continue
                 
-                
-                lesson_name = clean_special_characters(await lesson_ele.text_content()).strip()
                 save_file_path = f"./{unit_name}/{lesson_name}.mp4"
+                pdf_notes_path = f"./{unit_name}/{lesson_name} lesson note.pdf"
                 
                 video_page = await current_context.new_page()
                 
@@ -72,24 +75,34 @@ async def main():
                     if '.m3u8' in url or 'playlist' in url.lower() or 'video' in url.lower():
                         m3u8_urls.append(url)
                         print(f"Found m3u8 URL: {url}")
-                
+                        
                 video_page.on("response", intercept_response_for_m3u8)
-                await video_page.goto(lesson_url)
-                await video_page.wait_for_load_state("domcontentloaded")
                 
-                # Wait a bit for video to load and network requests to complete
+                
+                await video_page.goto(lesson_url)
+                await video_page.wait_for_load_state("domcontentloaded")                # Wait a bit for video to load and network requests to complete
                 await video_page.wait_for_timeout(3000)
+                
+                # Hide the toolbox element if it exists
+                toolbox_element = await video_page.query_selector(TOOLBOX_SELECTOR)
+                if toolbox_element:
+                    await video_page.evaluate("(element) => element.style.display = 'none'", toolbox_element)
+                
+                await video_page.pdf(
+                    path=pdf_notes_path,
+                    margin={ "top": '20px', "bottom": '20px', "right": '10px', "left": '10px' }
+                )
                 
                 if len(m3u8_urls) > 0:
                     download_result = download_m3u8_with_ffmpeg(m3u8_urls[0], save_file_path)
                     if download_result['success']:
                         print(f"Download successful! File size: {download_result['file_size']} bytes")
-                        write_to_csv(CSV_TRACKING_PATH, [unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0]])
+                        write_to_csv(CSV_TRACKING_PATH, [unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0], pdf_notes_path])
                     else:
                         print(f"Download failed: {download_result['error']}")
-                        write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0], download_result['error']])
+                        write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0], pdf_notes_path, download_result['error']])
                 
-                video_page.close()
+                await video_page.close()
 
 # Run the async function with asyncio
 asyncio.run(main())
