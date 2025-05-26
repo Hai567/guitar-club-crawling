@@ -44,6 +44,7 @@ course_urls = [
 
 # CSS selector for all elements with ID starting with "unit"
 UNIT_SELECTOR = "div.join.join-vertical > div"
+PLAY_BUTTON_SELECTOR = "body > main > div > div > div > div > div > div > div:nth-child(1) > div > div > div > button:first-child"
 TOOLBOX_SELECTOR = "body > button"
 NOTE_SELECTOR = "#notes"
 LESSON_SELECTOR = "ol > li > a"
@@ -116,13 +117,14 @@ async def main():
                         url = response.url
                         if '.m3u8' in url or 'playlist' in url.lower() or 'video' in url.lower():
                             m3u8_urls.append(url)
-                            print(f"Found m3u8 URL: {url}")
                             
                     video_page.on("response", intercept_response_for_m3u8)
                     
                     
                     await video_page.goto(lesson_url)
-                    await video_page.wait_for_load_state("domcontentloaded")                # Wait a bit for video to load and network requests to complete
+                    await video_page.wait_for_load_state("domcontentloaded")
+                    await video_page.locator(PLAY_BUTTON_SELECTOR).click()
+                    # Wait a bit for video to load and network requests to complete
                     await video_page.wait_for_timeout(3000)
                     
                     # Hide the toolbox element if it exists
@@ -145,6 +147,8 @@ async def main():
                             write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0], pdf_notes_path, download_result['error']])
                     
                     await video_page.close()
+                    
+        await new_page.close()
 
 # Run the async function with asyncio
 asyncio.run(main())
