@@ -205,12 +205,27 @@ def is_url_already_downloaded(csv_path, url):
     try:
         with open(csv_path, 'r', newline='', encoding='utf-8') as csvfile:
             reader = csv.reader(csvfile)
-            # Skip header row
-            next(reader, None)
             
+            # Read header row to find the column index for 'original_url'
+            header = next(reader, None)
+            if not header:
+                return False
+            
+            # Find the index of the 'original_url' column
+            original_url_index = None
+            for i, column_name in enumerate(header):
+                if column_name.strip().lower() == 'original_url':
+                    original_url_index = i
+                    break
+            
+            if original_url_index is None:
+                print(f"Warning: 'original_url' column not found in CSV header: {header}")
+                return False
+            
+            # Check each row for the URL
             for row in reader:
-                if len(row) >= 4:  # Ensure row has at least 4 columns (unit_name, lesson_name, file_path, original_url)
-                    original_url = row[3]  # original_url is in the 4th column (index 3)
+                if len(row) > original_url_index:  # Ensure row has the required column
+                    original_url = row[original_url_index]
                     if original_url == url:
                         return True
         return False
