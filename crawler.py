@@ -125,7 +125,7 @@ async def main():
                     await video_page.wait_for_load_state("domcontentloaded")
                     await video_page.locator(PLAY_BUTTON_SELECTOR).click()
                     # Wait a bit for video to load and network requests to complete
-                    await video_page.wait_for_timeout(3000)
+                    await video_page.wait_for_timeout(1000)
                     
                     # Hide the toolbox element if it exists
                     toolbox_element = await video_page.query_selector(TOOLBOX_SELECTOR)
