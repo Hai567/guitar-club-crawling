@@ -55,11 +55,22 @@ CSV_NOT_DOWNLOADED_TRACKING_PATH = "./not_downloaded.csv"
 
 async def main():
     async with async_playwright() as playwright:
-        # Connect to an existing instance of Chrome using the connect_over_cdp method.
-        browser = await playwright.chromium.connect_over_cdp("http://localhost:9222")
+        user = input("Choose (1) for using the current browser instance, other key to sign in: ")
         
-        current_context = browser.contexts[0]
-        new_page = await current_context.new_page()
+        if user == 1:
+            # Connect to an existing instance of Chrome using the connect_over_cdp method.
+            browser = await playwright.chromium.connect_over_cdp("http://localhost:9222")
+            
+            current_context = browser.contexts[0]
+            new_page = await current_context.new_page()
+        else:
+            browser = await playwright.chromium.launch()
+            
+            current_context = await browser.new_context()
+            new_page = await current_context.new_page()
+            print("Please loggin to your account")
+            await new_page.goto("https://www.guitarclub.io/login")
+            print("Choose (n) to cancel, other key to continue after loggin in: ")
         
         for course_link in course_urls:
             await new_page.goto(BASE_URL + course_link)
