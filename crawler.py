@@ -70,7 +70,7 @@ async def main():
             new_page = await current_context.new_page()
             print("Please loggin to your account")
             await new_page.goto("https://www.guitarclub.io/login")
-            input("Choose any key to continue after loggin in: ")
+            input("Press any key to continue after loggin in: ")
             
         
         for course_link in course_urls:
