@@ -57,7 +57,7 @@ async def main():
     async with async_playwright() as playwright:
         user = input("Choose (1) for using the current browser instance, other key to sign in: ")
         
-        if user == 1:
+        if user == "1":
             # Connect to an existing instance of Chrome using the connect_over_cdp method.
             browser = await playwright.chromium.connect_over_cdp("http://localhost:9222")
             
