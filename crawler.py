@@ -124,12 +124,21 @@ async def main():
                     
                     # Create a list to store m3u8 URLs for this lesson
                     m3u8_urls = []
+                    # m3u8_request_details = []
                     
                     # Set up network interception to capture m3u8 requests
                     async def intercept_response_for_m3u8(response):
                         url = response.url
                         if '.m3u8' in url or 'playlist' in url.lower() or 'video' in url.lower():
                             m3u8_urls.append(url)
+                            # # Capture request details
+                            # request = response.request
+                            # headers = await request.all_headers()
+                            # m3u8_request_details.append({
+                            #     'url': url,
+                            #     'method': request.method,
+                            #     'headers': headers
+                            # })
                             
                     video_page.on("response", intercept_response_for_m3u8)
                     
@@ -151,29 +160,13 @@ async def main():
                     )
                     
                     if len(m3u8_urls) > 0:
-                        print(f"Found {len(m3u8_urls)} m3u8 URLs, trying first one...")
                         download_result = download_m3u8_with_ffmpeg(m3u8_urls[0], save_file_path)
-                        
-                        # If download failed and we have more URLs, try the next one
-                        # Check for various timeout/connection related errors
-                        if (not download_result['success'] and len(m3u8_urls) > 1 and 
-                            any(error_term in download_result['error'].lower() for error_term in 
-                                ['timeout', 'timed out', 'connection', 'failed to open', 'network', 'unreachable'])):
-                            print(f"First URL failed ({download_result['error']}), trying alternative URL...")
-                            download_result = download_m3u8_with_ffmpeg(m3u8_urls[1], save_file_path)
-                        
                         if download_result['success']:
                             print(f"Download successful! File size: {download_result['file_size']} bytes")
-                            # Record which URL was actually used
-                            used_url = m3u8_urls[0] if len(m3u8_urls) > 0 else ""
-                            write_to_csv(CSV_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, used_url, pdf_notes_path])
+                            write_to_csv(CSV_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0], pdf_notes_path])
                         else:
                             print(f"Download failed: {download_result['error']}")
-                            used_url = m3u8_urls[0] if len(m3u8_urls) > 0 else ""
-                            write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, used_url, pdf_notes_path, download_result['error']])
-                    else:
-                        print("No m3u8 URLs found for this lesson")
-                        write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, "", pdf_notes_path, "No m3u8 URLs found"])
+                            write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0], pdf_notes_path, download_result['error']])
                     
                     await video_page.close()
                     

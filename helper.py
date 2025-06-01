@@ -38,7 +38,20 @@ def download_m3u8_with_ffmpeg(url, file_path, timeout=180):
     # Build the ffmpeg command
     cmd = [
         'ffmpeg',
-        '-headers', "accept: */*\r\naccept-language: en-US,en;q=0.9\r\ndnt: 1",
+        '-headers', (
+            "accept: */*\r\n"
+            "accept-language: en-US,en;q=0.9\r\n"
+            "dnt: 1\r\n"
+            "origin: https://www.guitarclub.io\r\n"
+            "priority: u=1, i\r\n"
+            "referer: https://www.guitarclub.io/\r\n"
+            "sec-ch-ua-mobile: ?0\r\n"
+            "sec-fetch-dest: empty\r\n"
+            "sec-fetch-mode: cors\r\n"
+            "sec-fetch-site: cross-site\r\n"
+            "sec-gpc: 1\r\n"
+            "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        ),
         '-i', url,
         '-c', 'copy',
         '-y',  # Overwrite output file
