@@ -4,13 +4,14 @@ import re, csv, subprocess, os, time
 def url_to_ffmpeg(url, file_path):
     return f"""ffmpeg -headers 'accept: */*'$'\r\n''accept-language: en-US,en;q=0.9'$'\r\n''dnt: 1'$'\r\n''origin: {url}' -c copy '{file_path}'"""
 
-def download_m3u8_with_ffmpeg(url, file_path):
+def download_m3u8_with_ffmpeg(url, file_path, timeout=600):
     """
     Download video using ffmpeg and check if download succeeded or failed
     
     Args:
         url (str): The video URL to download
         file_path (str): The output file path
+        timeout (int): Timeout in seconds (default: 600 = 10 minutes)
     
     Returns:
         dict: {
@@ -37,6 +38,11 @@ def download_m3u8_with_ffmpeg(url, file_path):
     # Build the ffmpeg command
     cmd = [
         'ffmpeg',
+        '-multiple_requests', '1',  # Enable multiple connections for HLS
+        '-http_persistent', '1',    # Keep connections alive
+        '-reconnect', '1',          # Auto-reconnect on failure
+        '-reconnect_streamed', '1', # Reconnect for streamed content
+        '-reconnect_delay_max', '2', # Max delay between reconnects
         '-headers', (
             "accept: */*\r\n"
             "accept-language: en-US,en;q=0.9\r\n"
@@ -75,6 +81,7 @@ def download_m3u8_with_ffmpeg(url, file_path):
             cmd,
             capture_output=True,
             text=True,
+            timeout=timeout,
             encoding='utf-8',
             errors='replace'
         )
@@ -102,6 +109,10 @@ def download_m3u8_with_ffmpeg(url, file_path):
         else:
             print(f"❌ Download failed: ffmpeg returned code {process.returncode}")
             print(f"Error: {process.stderr}")
+            
+    except subprocess.TimeoutExpired:
+        result['error'] = f"Download timed out after {timeout} seconds"
+        print(f"⏰ Download timed out: {file_path}")
         
     except subprocess.CalledProcessError as e:
         result['return_code'] = e.returncode
