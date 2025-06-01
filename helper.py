@@ -4,14 +4,14 @@ import re, csv, subprocess, os, time
 def url_to_ffmpeg(url, file_path):
     return f"""ffmpeg -headers 'accept: */*'$'\r\n''accept-language: en-US,en;q=0.9'$'\r\n''dnt: 1'$'\r\n''origin: {url}' -c copy '{file_path}'"""
 
-def download_m3u8_with_ffmpeg(url, file_path, timeout=300):
+def download_m3u8_with_ffmpeg(url, file_path, timeout=120):
     """
     Download video using ffmpeg and check if download succeeded or failed
     
     Args:
         url (str): The video URL to download
         file_path (str): The output file path
-        timeout (int): Timeout in seconds (default: 300 = 5 minutes)
+        timeout (int): Timeout in seconds (default: 120 = 2 minutes)
     
     Returns:
         dict: {
