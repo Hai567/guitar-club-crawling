@@ -151,19 +151,29 @@ async def main():
                     )
                     
                     if len(m3u8_urls) > 0:
+                        print(f"Found {len(m3u8_urls)} m3u8 URLs, trying first one...")
                         download_result = download_m3u8_with_ffmpeg(m3u8_urls[0], save_file_path)
                         
-                        # If download failed due to timeout and we have more URLs, try the next one
-                        if not download_result['success'] and 'timeout' in download_result['error'].lower() and len(m3u8_urls) > 1:
-                            print(f"First URL timed out, trying alternative URL...")
+                        # If download failed and we have more URLs, try the next one
+                        # Check for various timeout/connection related errors
+                        if (not download_result['success'] and len(m3u8_urls) > 1 and 
+                            any(error_term in download_result['error'].lower() for error_term in 
+                                ['timeout', 'timed out', 'connection', 'failed to open', 'network', 'unreachable'])):
+                            print(f"First URL failed ({download_result['error']}), trying alternative URL...")
                             download_result = download_m3u8_with_ffmpeg(m3u8_urls[1], save_file_path)
                         
                         if download_result['success']:
                             print(f"Download successful! File size: {download_result['file_size']} bytes")
-                            write_to_csv(CSV_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0] if len(m3u8_urls) > 0 else "", pdf_notes_path])
+                            # Record which URL was actually used
+                            used_url = m3u8_urls[0] if len(m3u8_urls) > 0 else ""
+                            write_to_csv(CSV_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, used_url, pdf_notes_path])
                         else:
                             print(f"Download failed: {download_result['error']}")
-                            write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0] if len(m3u8_urls) > 0 else "", pdf_notes_path, download_result['error']])
+                            used_url = m3u8_urls[0] if len(m3u8_urls) > 0 else ""
+                            write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, used_url, pdf_notes_path, download_result['error']])
+                    else:
+                        print("No m3u8 URLs found for this lesson")
+                        write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, "", pdf_notes_path, "No m3u8 URLs found"])
                     
                     await video_page.close()
                     
