@@ -77,6 +77,7 @@ async def main():
             await new_page.goto(BASE_URL + course_link)
             
             course_name = clean_special_characters(await new_page.title())
+            print(course_name)
             
             os.makedirs(f'./{course_name}', exist_ok=True)
             
@@ -151,12 +152,18 @@ async def main():
                     
                     if len(m3u8_urls) > 0:
                         download_result = download_m3u8_with_ffmpeg(m3u8_urls[0], save_file_path)
+                        
+                        # If download failed due to timeout and we have more URLs, try the next one
+                        if not download_result['success'] and 'timeout' in download_result['error'].lower() and len(m3u8_urls) > 1:
+                            print(f"First URL timed out, trying alternative URL...")
+                            download_result = download_m3u8_with_ffmpeg(m3u8_urls[1], save_file_path)
+                        
                         if download_result['success']:
                             print(f"Download successful! File size: {download_result['file_size']} bytes")
-                            write_to_csv(CSV_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0], pdf_notes_path])
+                            write_to_csv(CSV_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0] if len(m3u8_urls) > 0 else "", pdf_notes_path])
                         else:
                             print(f"Download failed: {download_result['error']}")
-                            write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0], pdf_notes_path, download_result['error']])
+                            write_to_csv(CSV_NOT_DOWNLOADED_TRACKING_PATH, [course_name, unit_name, lesson_name, save_file_path, lesson_url, m3u8_urls[0] if len(m3u8_urls) > 0 else "", pdf_notes_path, download_result['error']])
                     
                     await video_page.close()
                     
